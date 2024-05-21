@@ -11,36 +11,30 @@ def run3():
     rgb_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
 
     #Application of a Gaussian Blur
-    blur_temp = cv2.GaussianBlur(nir_image,(3,3),0)
-    cv2.imshow('bluredImage', blur_temp)
+    blur_nir = cv2.GaussianBlur(nir_image,(3,3),0)
 
     #Otsu Thresholding to segment the image
-    th, otsu_temp = cv2.threshold(blur_temp, 0, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY)
-    cv2.imshow('ThresholdedImage', otsu_temp)
+    th, thresh = cv2.threshold(blur_nir, 0, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY)
 
     #filling of the holes inside the fruit blob using a flood-fill approach
-    h, w = otsu_temp.shape[:2]
+    h, w = thresh.shape[:2]
     m1 = np.zeros((h+2, w+2), np.uint8)
-    ff1 = otsu_temp.copy()
+    ff1 = thresh.copy()
     cv2.floodFill(ff1, m1, (0,0), 255)
     #we then invert the result obtained by the floodfill operation in order to highlight the holes
-    holes_temp = cv2.bitwise_not(ff1)
-    cv2.imshow('FilledHoles', holes_temp)
+    holes = cv2.bitwise_not(ff1)
 
     #Mask of the apples
-    mask_temp = holes_temp | otsu_temp
-    mask_c_temp = cv2.cvtColor(mask_temp, cv2.COLOR_GRAY2RGB) 
-    cv2.imshow('Mask', mask_c_temp)
+    mask_nir = holes | thresh
+    mask_rgb = cv2.cvtColor(mask_nir, cv2.COLOR_GRAY2RGB)
 
     #Application of the masks to infrared images
-    app_nir_temp = nir_image * (mask_temp/255)
-    cv2.imshow('nirMasked', app_nir_temp)
+    seg_nir = nir_image * (mask_nir/255)
 
     #Application of the masks to colored images
     ones = np.ones(rgb_image.shape, dtype=int)
-    bool_mask_temp = ones & mask_c_temp
-    app_rgb = rgb_image * bool_mask_temp.astype(np.uint8)
-    cv2.imshow('MaskedImage', app_rgb)
+    bool_mask_nir = ones & mask_rgb
+    app_rgb = rgb_image * bool_mask_nir.astype(np.uint8)
 
     # Convert the color image to the LAB color space
     lab_image = cv2.cvtColor(app_rgb, cv2.COLOR_RGB2LAB)
@@ -72,7 +66,6 @@ def run3():
 
     # Convert the segmented image back to BGR for display with OpenCV
     kiwi_segmented_bgr = cv2.cvtColor(kiwi_segmented, cv2.COLOR_RGB2BGR)
-    cv2.imshow('segimg', kiwi_segmented_bgr)
 
     # Compute the mean and covariance of the russet cluster
     russet_pixels = lab_ab[segmented_img == kiwi_cluster_idx]
@@ -90,15 +83,13 @@ def run3():
 
     #Apply the final mask to nir image
     final_nir_russet_img = cv2.bitwise_and(nir_image, nir_image, mask=final_russet_mask)
-    cv2.imshow('masknirimg',final_nir_russet_img)
+    
 
     # Convert the final image to BGR for display with OpenCV
     final_russet_img_bgr = cv2.cvtColor(final_russet_img, cv2.COLOR_RGB2BGR)
-    cv2.imshow('maha',final_russet_img_bgr)
     result = final_russet_img_bgr
     result[nir_image == 0] = [0, 0, 0]
     grayImage = cv2.cvtColor(result, cv2.COLOR_BGR2GRAY)
-    cv2.imshow("greyimg",grayImage)
 
     # Thresholding to segment the fruit
     blurred_nir = cv2.GaussianBlur(grayImage, (5, 5), cv2.BORDER_DEFAULT)
@@ -108,7 +99,6 @@ def run3():
     thresh_filled = thresh.copy()
     cv2.floodFill(thresh_filled, None, (0, 0), 255)
     thresh_filled = cv2.bitwise_not(thresh_filled)
-    cv2.imshow("thresh_filled",thresh_filled)
 
     #Masking the original color image
 

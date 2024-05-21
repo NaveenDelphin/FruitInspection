@@ -9,35 +9,30 @@ def run1():
     color_image = cv2.imread('Task1pics/C1_00000' + picNo +'.png')
     rgb_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
 
-    #Application of a Gaussian Blur
-    blur_temp = cv2.GaussianBlur(nir_image,(3,3),0)
-    cv2.imshow('bluredImage', blur_temp)
+    # Application of a Gaussian Blur
+    blur_nir = cv2.GaussianBlur(nir_image, (3, 3), 0)
 
-    #Otsu Thresholding to segment the image
-    th, otsu_temp = cv2.threshold(blur_temp, 0, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY)
-    cv2.imshow('ThresholdedImage', otsu_temp)
+    # Otsu Thresholding to segment the image
+    _, thresh = cv2.threshold(blur_nir, 0, 255, cv2.THRESH_OTSU | cv2.THRESH_BINARY)
 
-    #filling of the holes inside the fruit blob using a flood-fill approach
-    h, w = otsu_temp.shape[:2]
-    m1 = np.zeros((h+2, w+2), np.uint8)
-    ff1 = otsu_temp.copy()
-    cv2.floodFill(ff1, m1, (0,0), 255)
-    #we then invert the result obtained by the floodfill operation in order to highlight the holes
-    holes_temp = cv2.bitwise_not(ff1)
-    cv2.imshow('FilledHoles', holes_temp)
+    # Filling of the holes inside the fruit blob using a flood-fill approach
+    h, w = thresh.shape[:2]
+    m1 = np.zeros((h + 2, w + 2), np.uint8)
+    ff1 = thresh.copy()
+    cv2.floodFill(ff1, m1, (0, 0), 255)
+    # Invert the result obtained by the floodfill operation in order to highlight the holes
+    holes = cv2.bitwise_not(ff1)
 
-    #Mask of the apples
-    mask_temp = holes_temp | otsu_temp
-    mask_c_temp = cv2.cvtColor(mask_temp, cv2.COLOR_GRAY2RGB) 
-    cv2.imshow('Mask', mask_c_temp)
+    # Mask of the apples
+    mask_nir = holes | thresh
+    mask_rgb = cv2.cvtColor(mask_nir, cv2.COLOR_GRAY2RGB)
 
-    #Application of the masks to infrared images
-    app_nir_temp = nir_image * (mask_temp/255)
-    cv2.imshow('nirMasked', app_nir_temp)
+    # Application of the masks to infrared images
+    seg_nir = nir_image * (mask_nir / 255)
 
     #Application of the masks to colored images
     ones = np.ones(rgb_image.shape, dtype=int)
-    bool_mask_temp = ones & mask_c_temp
+    bool_mask_temp = ones & mask_rgb
     app_rgb = rgb_image * bool_mask_temp.astype(np.uint8)
     cv2.imshow('MaskedImage', app_rgb)
 
@@ -57,7 +52,7 @@ def run1():
     closing_temp = closing_temp.astype(np.uint8)
     row_ff=np.zeros((2, w_ff))
     col_ff=np.zeros((h_ff+2, 2))
-    n_mask=~mask_temp
+    n_mask=~mask_nir
     mask_ff_temp=np.vstack((n_mask, row_ff))
     mask_ff_temp=np.hstack((mask_ff_temp, col_ff))
     mask_ff_temp = mask_ff_temp.astype(np.uint8)
@@ -69,7 +64,7 @@ def run1():
     open_ker=cv2.getStructuringElement(cv2.MORPH_RECT, (3,3))
     holes_ff_temp = holes_ff_temp.astype(np.uint8)    
     holes_ff_temp=~holes_ff_temp
-    sub_temp=mask_temp & holes_ff_temp
+    sub_temp=mask_nir & holes_ff_temp
     open_temp=cv2.morphologyEx(sub_temp, cv2.MORPH_OPEN, open_ker)
     cv2.imshow('defectsAlone', open_temp)
 
